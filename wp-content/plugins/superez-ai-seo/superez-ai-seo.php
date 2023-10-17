@@ -690,24 +690,79 @@ function my_seo_plugin_head() {
 */
 
         $meta_description   = get_post_meta($post->ID, 'ez-meta-desc', true);
-        if (!empty($meta_description)) {
+        if (!empty($meta_description)) 
             echo '<meta name="description" content="' . esc_attr($meta_description) . '">';
-        }
+        
 
         $meta_keywords      = get_post_meta($post->ID, 'ez-meta-keywords', true);
-        if (!empty($meta_keywords)) {
+        if (!empty($meta_keywords)) 
             echo '<meta name="keywords" content="' . esc_attr($meta_keywords) . '">';
-        }
+        
 
         $meta_categories    = get_post_meta($post->ID, 'ez-meta-categories', true);
-        if (!empty($meta_categories)) {
+        if (!empty($meta_categories)) 
             echo '<meta name="categories" content="' . esc_attr($meta_categories) . '">';
-        }
+        
 
         $meta_tags          = get_post_meta($post->ID, 'ez-meta-tags', true);
-        if (!empty($meta_tags)) {
+        if (!empty($meta_tags)) 
             echo '<meta name="tags" content="' . esc_attr($meta_tags) . '">';
+        
+        // handle social twitter/opengraph/facebook/whatever
+        $social_title = get_post_meta($post->ID, 'ez-meta-title', true);
+        $social_desc = get_post_meta($post->ID, 'ez-meta-desc', true);
+
+        if (!empty($social_title)) 
+            echo '<meta property="og:title" content="' . esc_attr($social_title) . '">';
+        else
+            echo '<meta property="og:title" content="' . esc_attr($post->post_title) . '">';
+
+        if (!empty($social_desc))
+            echo '<meta property="og:description" content="' . esc_attr($social_desc) . '">';
+        else
+            echo '<meta property="og:description" content="' . esc_attr($post->post_excerpt) . '">';
+        
+        // handle twitter
+        if (!empty($social_title)) 
+            echo '<meta name="twitter:title" content="' . esc_attr($social_title) . '">';
+        else
+            echo '<meta name="twitter:title" content="' . esc_attr($post->post_title) . '">';
+
+        if (!empty($social_desc))
+            echo '<meta name="twitter:description" content="' . esc_attr($social_desc) . '">';
+        else
+            echo '<meta name="twitter:description" content="' . esc_attr($post->post_excerpt) . '">';
+
+/*
+        // handle image (use wp. to get image)
+        
+        if (!empty($social_image)) {
+            echo '<meta property="og:image" content="' . esc_attr($social_image) . '">';
+            echo '<meta name="twitter:image" content="' . esc_attr($social_image) . '">';
         }
+
+        // handle url
+        $social_url = wp.get_permalink($post->ID);
+        if (!empty($social_url)) {
+            echo '<meta property="og:url" content="' . esc_attr($social_url) . '">';
+            echo '<meta name="twitter:url" content="' . esc_attr($social_url) . '">';
+        }
+
+        // handle site name
+        
+        // $social_site_name = get_post_meta($post->ID, 'ez-meta-site-name', true);
+        $social_site_name = get_bloginfo('name');
+        if (!empty($social_site_name)) {
+            echo '<meta property="og:site_name" content="' . esc_attr($social_site_name) . '">';
+        }
+
+        // handle type
+        $social_type = wp.get_post_type($post->ID);
+        if (!empty($social_type)) {
+            echo '<meta property="og:type" content="' . esc_attr($social_type) . '">';
+        }
+
+    */
         
 
     }
