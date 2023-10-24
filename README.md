@@ -42,3 +42,9 @@ A Wordpress plugin that utilizes the power of OpenAI GPT-3/GPT-4 API to generate
 - Tested on clean install of Wordpress 6.3.2
 
 [![screenshot](https://raw.githubusercontent.com/g023/SuperEZ-AI-SEO-Wordpress-Plugin/main/wp-superez-ai-seo-page.png)](#screenshot)
+
+
+## Notes
+v1.0.1a
+- Code cleanup. Release .zip should install as a wordpress zipped plugin.
+

@@ -99,7 +99,11 @@
 
 
 
-
+.config-container {
+}
+.config-container textarea {
+    width: 100%;
+}
 
 
 

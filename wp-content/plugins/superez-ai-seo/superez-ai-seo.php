@@ -2,7 +2,7 @@
 /*
 Plugin Name: SuperEZ AI SEO Wordpress Plugin
 Description: A Wordpress OpenAI API GPT-3/GPT-4 SEO and Content Generator for Pages and Posts
-Version: 1.0a
+Version: 1.0.1a
 Author: <a href="https://github.com/g023" target="_blank" >https://github.com/g023</a>
 License: 3-clause BSD license (https://opensource.org/licenses/BSD-3-Clause)
 */
@@ -181,6 +181,19 @@ include_once plugin_dir_path(__FILE__) . '_inc.php/sections.php';
 // );
 
 
+function gpt_dropdown_html($select='')
+{
+    $html = "<select class='the-model'>";
+    $html .= "<option value='gpt-3.5-turbo-16k' " . ($select == 'gpt-3.5-turbo-16k' ? 'selected' : '') . ">gpt-3.5-turbo-16k</option>";
+    $html .= "<option value='gpt-3.5-turbo-instruct' " . ($select == 'gpt-3.5-turbo-instruct' ? 'selected' : '') . ">gpt-3.5-turbo-instruct</option>";
+    $html .= "<option value='gpt-4' " . ($select == 'gpt-4' ? 'selected' : '') . ">gpt-4</option>";
+    $html .= "<option value='gpt-4-32k' " . ($select == 'gpt-4-32k' ? 'selected' : '') . ">gpt-4-32k</option>";
+    $html .= "</select>";
+    return $html;
+}
+
+// TODO: MOVE TO TEMPLATE WITH TEMPLATE TAGS:
+//  {{{PLUGIN_DIR}}}
 // Callback function to render the meta box
 function my_seo_meta_box_callback($post) {
     global $g_fields;
@@ -188,354 +201,27 @@ function my_seo_meta_box_callback($post) {
     $meta_description   = get_post_meta($post->ID, '_meta_description', true);
     $site_id            = get_current_blog_id();
 
+    $plugin_dir         = plugin_dir_url(__FILE__);
+
+    $tags["{{{PLUGIN_DIR}}}"] = $plugin_dir; // 
+
     // Output the HTML for the meta box
-    ?>
-        <!-- include from plugin dir -->
-        <script src="<?php echo plugin_dir_url(__FILE__); ?>_inc.js/superez-gpt-builder.gptapi.js"></script>
-        <!-- include style from plugin dir -->
-        <link rel="stylesheet" href="<?php echo plugin_dir_url(__FILE__); ?>_inc.css/styles.css" type="text/css" media="all" />
+    $template = file_get_contents($plugin_dir.'_inc.htm/tpl_edit.htm');
+    // replace tags
+    foreach ($tags as $tag => $value) {
+        $template = str_replace($tag, $value, $template);
+    }
+    echo $template;
 
-    <div class='ezseo'>
-        <div class='d-footer' site-id='<?php echo $site_id; ?>'>
-            <div class='d-footer-container'>
-                <div class='row'>
-                    <label for="the-aikey">OpenAI API Key:</label>
-                </div>
-                <div class='row'>
-                    <div class='col row-fld'><input id="the-aikey" type="password" placeholder="Enter your OpenAI API key here."></div>
-                    <br>
-                    <div class='col row-btn'><button id="the-aikey-btn" class='btn button'>set api key</button></div>
-                </div>
-            </div>
-        </div>
-
-        <br>
-
-        <script>
-            // BEGIN :: UPDATE API KEY //
-                // when we click the the-aikey-btn we set the api key for current window. (at moment just storing in a global variable)
-                // begin.
-                g_apiKey = '';
-                g_GPT = new ChatGPTClient(g_apiKey);
-
-
-                // when we click the the-aikey-btn we set the api key for current window. (at moment just storing in a global variable)
-                jQuery(document).ready(function($) {
-                    $('#the-aikey-btn').click(function() {
-                        var key = $('#the-aikey').val();
-                        g_apiKey = key;
-                        g_GPT = new ChatGPTClient(g_apiKey);
-                        alert('API key set.');
-                        // blank field
-                        $('#the-aikey').val('');
-                    });
-                });
-            // END :: UPDATE API KEY //
-
-            // BEGIN :: HANDLE UPDATE TITLE FROM REVISED //
-                // when we click the update-main-title button we update the main title with the revised title
-                jQuery(document).ready(function($) {
-                    $('.update-main-title').click(function() {
-                        var revised_title = $('#ez-base-title').val();
-                        /*
-                        // Get the current post title.
-const currentTitle = wp.data.select('core/editor').getCurrentPost().title;
-
-// Define the new title.
-const newTitle = 'New Page Title';
-
-// Update the post title using the `wp.data.dispatch` method.
-wp.data.dispatch('core/editor').editPost({ title: newTitle });
-
-// You can also console log the old and new titles for verification.
-console.log('Old Title:', currentTitle);
-console.log('New Title:', newTitle);
-                        */
-                        // update the title
-                        wp.data.dispatch('core/editor').editPost({ title: revised_title });
-
-
-                    });
-                });
-            // END :: HANDLE UPDATE TITLE FROM REVISED //
-
-
-</script>
-
-
-<!-- BEGIN: -->
-
-        <div class='d-ai-assistant'>
-            <div class='d-assistant-container'>
-                <div class='row title'>
-                    <label>: : Your AI Assistant : :</label>
-                </div>
-                <div class='row ai-assistant'>
-                    <br>
-                    <div class='col row-fld'><input id="the-prompt" type="text" placeholder="Make your request here (use {PAGE_TITLE} if you want):"></div>
-                    <br><br>
-                    <div class='col row-btn'><button id="the-ai-assistant-btn" class='btn button'>Get Answer</button></div>
-                    <br><br>
-                    <!-- temperature slider between 0.0 and 1.2 -->
-                    <div class='col row-fld'><input id="the-ai-assistant-temperature" type="range" min="0.0" max="1.2" step="0.1" value="0.7"></div>
-                    <!-- make slider display value -->
-                    <div class='col row-fld'><input id="the-ai-assistant-temperature-2" type="number" min="0.0" max="1.2" step="0.1" value="0.7"></div>
-
-                    <script>
-                        // when slider changes, update the number
-                        jQuery(document).ready(function($) {
-                            $('#the-ai-assistant-temperature').on('input', function() {
-                                $('#the-ai-assistant-temperature-2').val($(this).val());
-                            });
-                        });
-                        // when number changes, update the slider
-                        jQuery(document).ready(function($) {
-                            $('#the-ai-assistant-temperature-2').on('input', function() {
-                                $('#the-ai-assistant-temperature').val($(this).val());
-                            });
-                        });
-                    </script>
-
-                    <br><br>
-                    <!-- max token input -->
-                    <span>max tokens:</span>
-                    <div class='col row-fld'><input id="the-ai-assistant-max-tokens" type="number" min="1" max="16000" step="1" value="500"></div>
-                    <br><br>
-                    <div>output:</div>
-                    <textarea id='assistant-output' rows=10 ></textarea>
-                    <br><br>
-                    <div class='col row-btn'><button id="the-ai-assistant-add-block" class='btn button'>Add Block</button></div>
-                </div>
-            </div>
-        </div>
-        <br><br>
-
-        <script>
-            // find first {ai} tag in document and return the result after processing with the prompt
-            // return error if prompt empty
-            // if {PAGE_TITLE} in prompt, use the page title in place of that tag 
-            jQuery(document).ready(function($) {
-
-                // when + block clicked, take assistant output and insert it as a block in wp editor
-// BEGIN :: HOW TO INSERT A BLOCK INTO THE EDITOR
-/*
-// create a block
-var block = wp.blocks.createBlock('core/paragraph', {
-    content: 'Hello World!',
-});
-// add the block to the editor
-wp.data.dispatch('core/editor').insertBlocks(block);
-*/
-// END :: HOW TO INSERT A BLOCK INTO THE EDITOR
-                jQuery('#the-ai-assistant-add-block').on('click', function() {
-                    // get the output
-                    var output = $('#assistant-output').val();
-                    // if it is empty, error
-                    if (output == '') {
-                        alert('No content to add.');
-                        return;
-                    }
-                    
-                    // create a block
-                    var block = wp.blocks.createBlock('core/paragraph', {
-                        content: output,
-                    });
-
-                    // add the block to the editor
-                    // wp.data.dispatch('core/editor').insertBlocks(block); // deprecated
-                    // new: wp.data.dispatch( 'core/block-editor' ).insertBlocks`
-                    wp.data.dispatch( 'core/block-editor' ).insertBlocks( block );
-                });
-
-                // when title clicked, slidetoggle
-                jQuery('.d-ai-assistant .title').on('click', function() {
-                    jQuery('.d-ai-assistant .ai-assistant').slideToggle(10);
-                });
-
-                // when assistant button clicked
-                jQuery('#the-ai-assistant-btn').click(function() {
-                    // createBlock from wordpress
-
-                    var prompt = $('#the-prompt').val();
-                    if (prompt == '') {
-                        alert('Please enter a prompt.');
-                        return;
-                    }
-                    // get the page title
-                    var title = $('h1.editor-post-title').html();
-                    // replace {PAGE_TITLE} with title
-                    prompt = prompt.replace('{PAGE_TITLE}', title);
-                    // get the content
-                    var content = $('.editor-post-text-editor').val();
-                    // replace {PAGE_CONTENT} with content
-                    prompt = prompt.replace('{PAGE_CONTENT}', content);
-                    // get the model
-                    var model = 'gpt-3.5-turbo-16k';
-                    // get the temperature
-                    // var temperature = 0.7;
-                    var temperature = $('#the-ai-assistant-temperature').val();
-                    console.log('temperature',temperature);
-                    // get the max tokens
-                    // var max_tokens = 60;
-                    var max_tokens = $('#the-ai-assistant-max-tokens').val();
-                    console.log('max_tokens',max_tokens);
-                    // make temperate a float
-                    temperature = parseFloat(temperature);
-                    // make max tokens an int
-                    max_tokens = parseInt(max_tokens);
-                    // set the prompt up
-                    messages    = [{ role: 'user', content: prompt }];
-                    // send the request, and await a response
-                    get_response(model,messages,temperature,max_tokens, '.d-ai-assistant #assistant-output');
-
-                });
-            });
-
-
-        </script>
-<!-- END: -->
-
-
-<script>
-
-
-            // BEGIN :: 
-            // create a function based off the code in .my-seo-fetch-revise-title
-            async function update_output(parent_class)
-            {
-                    // theButton is $(this)
-                    // title = jQuery('h1.editor-post-title').html();
-                    // use wp. javascript functions to get title
-                    const title = wp.data.select('core/editor').getCurrentPost().title;
-                    content = jQuery('.editor-post-text-editor').val(); // need a better option
-                    // get the parent div
-                    var parent_div = jQuery(parent_class);
-                    // get the target to send the output to
-                    var update_class = parent_class + ' .output';
-
-                    console.log('parent_class',parent_class);
-                    console.log('update_class',update_class);
-
-                    console.log('current_output',jQuery(update_class).val());
-
-
-                    console.log('t',title);
-                    // get the prompt // parent gpt-field // child prompt
-                    // var prompt = parent_div.find('.prompt').val();
-                    var prompt = parent_div.find('.the-preprompt').val();
-
-                    console.log('prompt',prompt);
-
-                    // replace {POST_TITLE} with title
-                    prompt = prompt.replace('{POST_TITLE}', title);
-                    // replace {POST_CONTENT} with content
-                    prompt = prompt.replace('{POST_CONTENT}', content);
-
-                    console.log('prompt',prompt);
-                    // get the model
-                    // var model = parent_div.find('.ai-model').val();
-                    var model = parent_div.find('.the-model').val();
-                    console.log('model',model);
-                    // get the temperature
-                    // var temperature = $('.gpt-field .ai-temperature').val();
-                    // var temperature = parent_div.find('.ai-temperature').val();
-                    var temperature = parent_div.find('.the-temp').val();
-                    console.log('temperature',temperature);
-                    // get the max tokens
-                    // var max_tokens = $('.gpt-field .ai-max-tokens').val();
-                    // var max_tokens = parent_div.find('.ai-max-tokens').val();
-                    var max_tokens = parent_div.find('.the-maxtokens').val();
-                    console.log('max_tokens',max_tokens);
-                    // make temperate a float
-                    temperature = parseFloat(temperature);
-                    // make max tokens an int
-                    max_tokens = parseInt(max_tokens);
-                    // set the prompt up
-                    messages    = [{ role: 'user', content: prompt }];
-
-
-                    // send the request, and await a response
-                    await get_response(model,messages,temperature,max_tokens, update_class);
-            }
-
-            // when we click my-seo-fetch-revise-title
-            jQuery(document).ready(function($) {
-
-
-                // send fld attribute on button forward
-                $('.my-seo-fetch-revise-title').on('click', async function( theButton ) {
-                    var parent_class = '.gpt-field[fld='+$(this).attr('fld')+']';
-                    await update_output(parent_class);
-                });
-                
-                $('.my-seo-fetch-title').on('click', async  function( theButton ) {
-                    var parent_class = '.gpt-field[fld='+$(this).attr('fld')+']';
-                    await update_output(parent_class);
-                });
-
-                $('.my-seo-fetch-ai-description').on('click', async  function ( theButton ) {
-                    var parent_class = '.gpt-field[fld='+$(this).attr('fld')+']';
-                    await update_output(parent_class);
-                });
-
-                $('.my-seo-fetch-ai-keywords').on('click', async  function ( theButton ) {
-                    var parent_class = '.gpt-field[fld='+$(this).attr('fld')+']';
-                    await update_output(parent_class);
-                });
-
-                $('.my-seo-fetch-ai-categories').on('click', async  function ( theButton ) {
-                    var parent_class = '.gpt-field[fld='+$(this).attr('fld')+']';
-                    await update_output(parent_class);
-                });
-
-                $('.my-seo-fetch-ai-tags').on('click', async  function ( theButton ) {
-                    var parent_class = '.gpt-field[fld='+$(this).attr('fld')+']';
-                    await update_output(parent_class);
-                });
-
-            });
-
-            // END ::
-
-
-        </script>
-<!-- 
-        <label for="meta-title">Meta Title:</label><br>
-        <input type="text" name="meta-title" id="meta-title" value="<?php echo esc_attr($meta_title); ?>" size="70"><br>
-
-        <label for="meta-description">Meta Description:</label><br>
-        <textarea name="meta-description" id="meta-description" rows="3" cols="70"><?php echo esc_textarea($meta_description); ?></textarea> 
--->
-        <?php
-        echo "<script>
-            // handle sliders for gpt-fields
-            jQuery(document).ready(function($) {
-                $('.gpt-field input[type=range]').on('input', function() {
-                    $(this).next().val($(this).val());
-                });
-                $('.gpt-field input[type=number]').on('input', function() {
-                    $(this).prev().val($(this).val());
-                });
-            });
-
-            // default hide config
-            jQuery(document).ready(function($) {
-                $('.gpt-field .config-container').hide();
-            });
-            // when click show config
-            jQuery(document).ready(function($) {
-                $('.gpt-field .show-hide-config').on('click', function() {
-                    $(this).parent().find('.config-container').slideToggle(10);
-                });
-            });
-        </script>
-        ";
+    // -----> continue
+    
+        // now add the fields
         foreach ($g_fields as $field) {
             echo "<div class='gpt-field' fld='".$field['id']."'>";
             echo '<label for="' . esc_attr($field['id']) . '">' . esc_html($field['label']) . '</label><br>';
 
-            // show prompt as hidden field
-            echo '<input type="hidden" class="prompt" value="' . esc_attr($field['prompt']) . '" size="70">';
+            // show prompt as hidden field (probably redundant)
+            // echo '<input type="hidden" class="prompt" value="' . esc_attr($field['prompt']) . '" size="70">'; 
             /*
     'ai-max-tokens' => 60,
     'ai-temperature' => 0.7,
@@ -546,21 +232,15 @@ wp.data.dispatch('core/editor').insertBlocks(block);
             echo '<input type="hidden" class="ai-model" value="' . esc_attr($field['ai-model']) . '" size="70">';
 
 
-            $escape_type = $field['escape-type'];
-            $sanitize_type = $field['sanitize-type'];
-            $template = $field['template-admin'];
+            $escape_type    = $field['escape-type'];
+            $sanitize_type  = $field['sanitize-type'];
+            $template       = $field['template-admin'];
+            $gpt_selected   = $field['ai-model'];
+
             $content = $escape_type($sanitize_type(get_post_meta($post->ID, $field['id'], true)));
             $template = str_replace('{CONTENT}', $content, $template);
 
 
-            $template .= "<style>
-            .config-container {
-            }
-            .config-container textarea {
-                width: 100%;
-            }
-            </style>
-            ";
             $template .= "<div class='config-container row'>";
             // BEGIN :: slider for temperature with number input as well
             $template .= "<div class='col'>";
@@ -581,35 +261,27 @@ wp.data.dispatch('core/editor').insertBlocks(block);
             $template .= '</div><!-- end .col -->';
 
             // dropdown for model (select default)
-            $selected = $field['ai-model'];
             $template .= "<br><br><div class='row'>";
-            $template .= "<select class='the-model'>";
-            $template .= "<option value='gpt-3.5-turbo-16k' " . ($selected == 'gpt-3.5-turbo-16k' ? 'selected' : '') . ">gpt-3.5-turbo-16k</option>";
-            $template .= "<option value='gpt-3.5-turbo-instruct' " . ($selected == 'gpt-3.5-turbo-instruct' ? 'selected' : '') . ">gpt-3.5-turbo-instruct</option>";
-            $template .= "<option value='gpt-4' " . ($selected == 'gpt-4' ? 'selected' : '') . ">gpt-4</option>";
-            $template .= "<option value='gpt-4-32k' " . ($selected == 'gpt-4-32k' ? 'selected' : '') . ">gpt-4-32k</option>";
-            $template .= "</select>";
+            $template .= gpt_dropdown_html($gpt_selected);
             $template .= "</div><!-- end .row -->";
 
             $template .= "</div><!-- end .config-container -->";
 
 
 
+            // show hide configurations
+            $template .= "<br><button class='button show-hide-config'>show/hide config</button>";
 
             $button_id = $field['button-id'];
             $button = $field['button'];
-            $template .= '<br><button class="button ' . $button_id . '" fld="'. $field['id'] .'" >' . $button . '</button>';
+            $template .= '<button class="button ' . $button_id . '" fld="'. $field['id'] .'" >' . $button . '</button>';
 
-            // show hide configurations
-            $template .= "<button class='button show-hide-config'>show/hide config</button>";
 
 
             // check for more buttons and add
-            if (isset($field['more-buttons'])) {
-                foreach ($field['more-buttons'] as $more_button) {
+            if (isset($field['more-buttons'])) 
+                foreach ($field['more-buttons'] as $more_button) 
                     $template .= '<button class="button ' . $more_button['id'] . '" fld="'. $field['id'] .'" >' . $more_button['label'] . '</button><br>';
-                }
-            }
 
             // $template .= "<br><br>";
 
@@ -620,31 +292,9 @@ wp.data.dispatch('core/editor').insertBlocks(block);
         }
         ?>
 
-        <!-- have a button to fetch the title and the content from those sections. Use jquery to read values and then console.log -->
-        <br>
-        <!-- <button id="my-seo-fetch-title" class="button">Fetch Title</button>
-        <button id="my-seo-fetch-content" class="button">Fetch Content</button>
-        <button id='my-seo-fetch-ai-description' class='button'>Fetch AI Description</button> -->
 
     </div> <!-- end .ezseo -->
 
-    <script>
-        jQuery(document).ready(function($) {
-
-            $('#my-seo-fetch-title').click(function() {
-                var title = $('h1.editor-post-title').html();
-                console.log('t',title);
-            });
-
-            $('#my-seo-fetch-content').click(function() {
-                var content = $('.editor-post-text-editor').val();
-                console.log('c',content);
-            });
-            
-        });
-    </script>
-
-    
 
     <?php
 }
@@ -656,22 +306,20 @@ function my_seo_plugin_save_meta($post_id) {
 
     if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
 
-    foreach ($g_fields as $field) {
-        if (isset($_POST[$field['id']])) {
+    foreach ($g_fields as $field) 
+        if (isset($_POST[$field['id']])) 
             update_post_meta($post_id, $field['id'], call_user_func($field['sanitize-type'], $_POST[$field['id']]));
-        }        
-    }
 }
 
 add_action('save_post', 'my_seo_plugin_save_meta');
 
 // Enqueue the JavaScript file
 function my_seo_plugin_enqueue_scripts() {
-    //
     wp_enqueue_script('my-seo-script', 
         plugin_dir_url(__FILE__) . '_inc.js/superez-gpt-builder.gptapi.js', 
-        plugin_dir_url(__FILE__) . '_inc.js/script.js', array('jquery'), 
-        '1.0', //
+        plugin_dir_url(__FILE__) . '_inc.js/script.js', 
+        array('jquery'), 
+        '1.0', 
         true);
 }
 
@@ -681,7 +329,7 @@ function my_seo_plugin_enqueue_scripts() {
 function my_seo_plugin_head() {
     global $post;
 
-    if (is_singular()) {
+    if (is_singular()) { // if is a single post or page
 /*
         $meta_title         = get_post_meta($post->ID, '_meta_title', true);
         if (!empty($meta_title)) {
